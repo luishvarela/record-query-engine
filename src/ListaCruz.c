@@ -27,15 +27,15 @@ struct StructListaCruz {
 
 // Acha em qual grupo o item entra
 static GRUPO *lxLocalizarGrupo(const LISTACRUZ *Lista, int Eixo, const CHAVE *Chave, GRUPO **Anterior){
-    GRUPO *Anterior = NULL;
+    GRUPO *Ant = NULL;
     GRUPO *Atual = Lista->Grupos[Eixo];
 
     while(Atual != NULL && cComparar(&Atual->Chave, Chave) < 0){
-        Anterior = Atual;
+        Ant = Atual;
         Atual = Atual->Proximo;
     }
 
-    *Anterior = Anterior;
+    *Anterior = Ant;
     return Atual;
 }
 
@@ -75,51 +75,46 @@ static bool lxAnexar(LISTACRUZ *Lista, int Eixo, CELULA *Celula){
 
 // tira celula do eixo sem apagar o item, remove se ficar vazio
 static bool lxDesligar(LISTACRUZ *Lista, int Eixo, CELULA *Celula){
-    CHAVE Chave;
-    if(!cCriar(Celula->Item, Lista->Campos[Eixo], &Chave)) return false;
+    GRUPO *AnteriorGrupo = NULL;
+    for(GRUPO *Grupo = Lista->Grupos[Eixo]; Grupo != NULL; ){
+        CELULA *Anterior = NULL;
+        for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[Eixo]){
+            if(Atual == Celula){
+                if(Anterior == NULL) Grupo->Inicio = Atual->Proximo[Eixo];
+                else                 Anterior->Proximo[Eixo] = Atual->Proximo[Eixo];
+                if(Grupo->Fim == Atual) Grupo->Fim = Anterior;
 
-    GRUPO *AnteriorGrupo;
-    GRUPO *Grupo = lxLocalizarGrupo(Lista, Eixo, &Chave, &AnteriorGrupo);
-    bool Achou = (Grupo != NULL && cComparar(&Grupo->Chave, &Chave) == 0);
-    cApagar(&Chave);
-    if(!Achou) return false;
-
-    CELULA *Anterior = NULL;
-    CELULA *Atual = Grupo->Inicio;
-    while(Atual != NULL && Atual != Celula){
-        Anterior = Atual;
-        Atual = Atual->Proximo[Eixo];
-    }
-    if(Atual == NULL) return false;
-
-    if(Anterior == NULL) Grupo->Inicio = Celula->Proximo[Eixo];
-    else                 Anterior->Proximo[Eixo] = Celula->Proximo[Eixo];
-    if(Grupo->Fim == Celula) Grupo->Fim = Anterior;
-
-    if(Grupo->Inicio == NULL){
-        if(AnteriorGrupo == NULL) Lista->Grupos[Eixo] = Grupo->Proximo;
-        else                      AnteriorGrupo->Proximo = Grupo->Proximo;
-        cApagar(&Grupo->Chave);
-        free(Grupo);
+                if(Grupo->Inicio == NULL){
+                    if(AnteriorGrupo == NULL) Lista->Grupos[Eixo] = Grupo->Proximo;
+                    else                      AnteriorGrupo->Proximo = Grupo->Proximo;
+                    cApagar(&Grupo->Chave);
+                    free(Grupo);
+                }
+                return true;
+            }
+            Anterior = Atual;
+        }
+        AnteriorGrupo = Grupo;
+        Grupo = Grupo->Proximo;
     }
 
-    return true;
+    return false;
 }
 
 static CELULA *lxEncontrar(const LISTACRUZ *Lista, const ITEM *Item){
-    CHAVE Chave;
-    if(!cCriar(Item, Lista->Campos[0], &Chave)) return NULL;
-
-    GRUPO *Anterior;
-    GRUPO *Grupo = lxLocalizarGrupo(Lista, 0, &Chave, &Anterior);
-    bool Achou = (Grupo != NULL && cComparar(&Grupo->Chave, &Chave) == 0);
-    cApagar(&Chave);
-    if(!Achou) return NULL;
-
-    for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[0])
-        if(Atual->Item == Item) return Atual;
+    for(GRUPO *Grupo = Lista->Grupos[0]; Grupo != NULL; Grupo = Grupo->Proximo)
+        for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[0])
+            if(Atual->Item == Item) return Atual;
 
     return NULL;
+}
+
+static bool lxContemCelula(const LISTACRUZ *Lista, int Eixo, const CELULA *Celula){
+    for(GRUPO *Grupo = Lista->Grupos[Eixo]; Grupo != NULL; Grupo = Grupo->Proximo)
+        for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[Eixo])
+            if(Atual == Celula) return true;
+
+    return false;
 }
 
 LISTACRUZ *lxCriar(int CampoA, int CampoB){
@@ -192,10 +187,10 @@ ITEM *lxRemover(LISTACRUZ *Lista, const ITEM *Item){
     if(Lista == NULL || Item == NULL) return NULL;
 
     CELULA *Atual = lxEncontrar(Lista, Item);
-    if(Atual == NULL) return NULL;
+    if(Atual == NULL || !lxContemCelula(Lista, 1, Atual)) return NULL;
 
-    lxDesligar(Lista, 0, Atual);
-    lxDesligar(Lista, 1, Atual);
+    if(!lxDesligar(Lista, 0, Atual)) return NULL;
+    if(!lxDesligar(Lista, 1, Atual)) return NULL;
 
     ITEM *Removido = Atual->Item;
     free(Atual);
