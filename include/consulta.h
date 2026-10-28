@@ -8,6 +8,7 @@
 
 #define CAMPO_SIMILARIDADE (-1)
 
+// Consulta parseada: filtros/similaridades e configuracoes das estruturas de resultado.
 typedef struct {
     CONSULTA consulta;
 

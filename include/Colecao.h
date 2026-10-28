@@ -28,5 +28,6 @@ int      colTamanho(const COLECAO *Colecao);
 
 // Percorre na ordem natural da estrutura (topo->base na pilha, grupo a grupo na generalizada, eixo 0 na cruzada...) ate acabar ou Visitar devolver true.
 void     colPercorrer(const COLECAO *Colecao, VISITA Visitar, void *Contexto);
+void     colPercorrerEixo(const COLECAO *Colecao, int Eixo, VISITA Visitar, void *Contexto);
 
 #endif

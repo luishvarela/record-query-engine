@@ -5,7 +5,7 @@
 #include <stddef.h>
 #include "Colecao.h"
 
-// Descrição das colunas do arquivo CSV
+// Metadados do cabecalho usados para interpretar as linhas do dataset.
 typedef struct {
     char **nomes;      // Nome de cada coluna
     int nCampos;    // Número de colunas

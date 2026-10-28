@@ -13,6 +13,7 @@ struct StructListaCab {
     int  Tamanho;
 };
  
+// Cria uma lista com no cabeca sentinela, inicialmente sem itens.
 LISTACAB *lcCriar(void){
     LISTACAB *Lista = (LISTACAB *) calloc(1, sizeof(LISTACAB));
     if(Lista == NULL) return NULL;
@@ -28,6 +29,7 @@ LISTACAB *lcCriar(void){
     return Lista;
 }
  
+// Libera o no sentinela, os demais nos e, opcionalmente, seus itens.
 void lcApagar(LISTACAB **Lista, bool ApagarItens){
     if(Lista == NULL || *Lista == NULL) return;
  
@@ -44,6 +46,7 @@ void lcApagar(LISTACAB **Lista, bool ApagarItens){
     *Lista = NULL;
 }
  
+// Acrescenta um item ao fim sem alterar o no sentinela.
 bool lcInserir(LISTACAB *Lista, ITEM *Item){
     if(Lista == NULL || Item == NULL) return false;
  
@@ -60,6 +63,7 @@ bool lcInserir(LISTACAB *Lista, ITEM *Item){
     return true;
 }
  
+// Localiza e remove o item pelo endereco, mantendo o sentinela no inicio.
 ITEM *lcRemover(LISTACAB *Lista, const ITEM *Item){
     if(Lista == NULL || Item == NULL) return NULL;
  
@@ -81,15 +85,18 @@ ITEM *lcRemover(LISTACAB *Lista, const ITEM *Item){
     return NULL;
 }
  
+// Retorna a quantidade de itens, sem contar o no sentinela.
 int lcTamanho(const LISTACAB *Lista){
     return (Lista == NULL) ? 0 : Lista->Tamanho;
 }
 
+// Informa se nao ha itens alem do sentinela.
 bool lcVazia(const LISTACAB *Lista){
     if(lcTamanho(Lista) == 0) return true;
     else                      return false;
 }
  
+// Percorre os itens apos o sentinela
 void lcPercorrer(const LISTACAB *Lista, VISITA Visitar, void *Contexto){
     if(Lista == NULL || Visitar == NULL) return;
     for(NO *Atual = Lista->Cabeca->Proximo; Atual != NULL; Atual = Atual->Proximo)

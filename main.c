@@ -1,9 +1,13 @@
 #define _POSIX_C_SOURCE 200809L
 
+// inclusao das bibliotecas necessarias pro projeto
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+// só inclui limites como int max, int min e tals
 #include <limits.h>
+
+// essas bibliotecas sao mais para debugging e para o relatorio, nao afetam o projeto muito em si.
 #include <errno.h>
 #include <time.h>
 
@@ -13,18 +17,23 @@
 #include "leitura.h"
 #include "consulta.h"
 
+// struct dos argumentos
 typedef struct {
     const char *reader, *input, *base, *result, *query, *output;
     long top_k;
     long limit;
+    int axis;  // Eixo usado somente ao percorrer uma lista cruzada.
 } ARGS;
 
+// Serve para a medição de tempo do relatorio
+// Retorna o relogio monotonic em milissegundos para medir duracoes.
 static double agora_ms(void) {
     struct timespec ts;
     clock_gettime(CLOCK_MONOTONIC, &ts);
     return (double)ts.tv_sec * 1000.0 + (double)ts.tv_nsec / 1e6;
 }
 
+// Converte um argumento numerico nao negativo e rejeita valores parciais ou fora do limite.
 static bool ler_inteiro(const char *s, long *out) {
     char *fim;
     errno = 0;
@@ -34,6 +43,7 @@ static bool ler_inteiro(const char *s, long *out) {
     return true;
 }
 
+// Le os argumentos passados na chamada
 static bool ler_args(int argc, char **argv, ARGS *a) {
     memset(a, 0, sizeof *a);
     for (int i = 1; i < argc; i++) {
@@ -41,6 +51,7 @@ static bool ler_args(int argc, char **argv, ARGS *a) {
         const char *valor = NULL;
         const char *eq = strchr(argv[i], '=');
         if (eq) {
+            // Aceita tanto "--limite 10" quanto "--limite=10".
             size_t n = (size_t)(eq - argv[i]);
             if (n >= sizeof nome) n = sizeof nome - 1;
             memcpy(nome, argv[i], n);
@@ -67,19 +78,27 @@ static bool ler_args(int argc, char **argv, ARGS *a) {
         else if (strcmp(nome, "--limit") == 0) {
             if (!ler_inteiro(valor, &a->limit)) return false;
         }
+        else if (strcmp(nome, "--axis") == 0) {
+            long axis;
+            if (!ler_inteiro(valor, &axis) || axis > 1) return false;
+            a->axis = (int)axis;
+        }
         else return false;
     }
     return a->reader && a->input && a->base && a->result && a->query && a->output;
 }
 
+// Compara dois itens pelo campo escolhido, considerando tipo, ausencia e direcao.
 static int comparar(const ITEM *a, const ITEM *b, int campo, bool desc) {
     int r;
+    // Similaridade é um valor calculado, nao uma coluna do registro
     if (campo == CAMPO_SIMILARIDADE) {
         double x = iGetSim(a), y = iGetSim(b);
         r = (x > y) - (x < y);
         return desc ? -r : r;
     }
     TIPO ta = iGetTipo(a, campo), tb = iGetTipo(b, campo);
+    // Valores ausentes ficam antes dos presentes; tipos diferentes seguem a ordem NUMERO/TEXTO.
     if (ta == AUSENTE || tb == AUSENTE) return (ta == AUSENTE) - (tb == AUSENTE);
     if (ta != tb) r = (ta == TEXTO) - (tb == TEXTO);
     else if (ta == NUMERO) {
@@ -91,11 +110,14 @@ static int comparar(const ITEM *a, const ITEM *b, int campo, bool desc) {
     }
     return desc ? -r : r;
 }
+// Adaptador para ordenar pelo mesmo campo em ordem crescente.
 static int cmp_asc (const ITEM *a, const ITEM *b, int c) { return comparar(a, b, c, false); }
+// Adaptador para ordenar pelo mesmo campo em ordem decrescente.
 static int cmp_desc(const ITEM *a, const ITEM *b, int c) { return comparar(a, b, c, true); }
 
 static const int GRUPO_PADRAO[1] = { 0 };
 
+// Traduz ORDER, GROUP e CROSS para a configuracao da colecao escolhida.
 static bool montar_config(const char *est, const PLANO_CONSULTA *p, int n_campos,
                           bool resultado, CONFIG *cfg) {
     memset(cfg, 0, sizeof *cfg);
@@ -111,6 +133,7 @@ static bool montar_config(const char *est, const PLANO_CONSULTA *p, int n_campos
             cfg->CamposGrupo  = p->campos_grupo;
             cfg->nCamposGrupo = p->n_grupo;
         } else if (resultado) {
+            // A estrutura de resultados precisa de campos GROUP explicitos.
             return false;
         } else {
             cfg->CamposGrupo  = GRUPO_PADRAO;
@@ -122,6 +145,7 @@ static bool montar_config(const char *est, const PLANO_CONSULTA *p, int n_campos
             cfg->CampoCruzA = p->cross_a;
             cfg->CampoCruzB = p->cross_b;
         } else if (resultado) {
+            // A estrutura de resultados precisa de campos CROSS explicitos.
             return false;
         } else {
             cfg->CampoCruzA = 0;
@@ -139,6 +163,7 @@ typedef struct {
     bool            erro;
 } CTX_BUSCA;
 
+// filtra o item e o transfere para a colecao de resultados, serve de callback da busca.
 static bool visita_busca(ITEM *item, void *ctx_) {
     CTX_BUSCA *ctx = ctx_;
     if (!avaliar_item(item, ctx->consulta)) return false;
@@ -160,6 +185,7 @@ typedef struct {
     bool        erro;
 } CTX_SAIDA;
 
+// Callback de escrita; true encerra o percurso apos erro ou ao atingir top-k.
 static bool visita_saida(ITEM *item, void *ctx_) {
     CTX_SAIDA *ctx = ctx_;
     if (fputs(iGetLinha(item), ctx->arq) == EOF || fputs(ctx->eol, ctx->arq) == EOF) {
@@ -170,7 +196,9 @@ static bool visita_saida(ITEM *item, void *ctx_) {
     return ctx->k > 0 && ctx->escritos >= ctx->k;
 }
 
+// Coordena leitura dos argumentos, carregamento, consulta e escrita do resultado.
 int main(int argc, char **argv) {
+    // Definicao das variaveis que serao utilizadas
     ARGS args;
     ESQUEMA esquema;
     PLANO_CONSULTA plano;
@@ -188,18 +216,16 @@ int main(int argc, char **argv) {
     if (!leitor_valido(args.reader)) return 1;
     if (!colNomeValido(args.base) || !colNomeValido(args.result)) return 1;
 
-    // 1) Abre o esquema do arquivo
+    // Abre o esquema do arquivo
     if (!esquema_abrir(&esquema, args.reader, args.input)) return 1;
     esquema_ok = true;
-
-    // 2) Carrega o plano de consulta
+    // Carrega o plano de consulta
     if (!consulta_carregar(args.query, &esquema, &plano, erro_consulta, sizeof erro_consulta)) {
         esquema_liberar(&esquema);
         return 1;
     }
     plano_ok = true;
-
-    // 3) Configura as estruturas base e resultado
+    // Configura as estruturas base e resultado
     if (!montar_config(args.base,   &plano, esquema.nCampos, false, &cfg_base) ||
         !montar_config(args.result, &plano, esquema.nCampos, true,  &cfg_res)) {
         consulta_liberar(&plano);
@@ -207,7 +233,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // 4) Carrega o dataset
+    // Carrega o dataset
     t0 = agora_ms();
     base = carregar_dataset(args.input, args.base, &cfg_base, &esquema, (int)args.limit, &lidos);
     load_ms = agora_ms() - t0;
@@ -217,7 +243,7 @@ int main(int argc, char **argv) {
         return 1;
     }
 
-    // 5) Cria o container de resultado e executa a busca
+    // Cria o container de resultado e executa a busca
     resultado = colCriar(args.result, &cfg_res);
     if (resultado == NULL) {
         colApagar(&base, true);
@@ -240,7 +266,7 @@ int main(int argc, char **argv) {
         insert_ms = busca.ms_insercao;
         search_ms -= insert_ms;
 
-        // 6) Escreve o arquivo de saída
+        // Escreve o arquivo de saída
         t0 = agora_ms();
         saida.arq      = fopen(args.output, "w");
         saida.k        = args.top_k;
@@ -251,7 +277,7 @@ int main(int argc, char **argv) {
         if (!saida.erro) {
             if (fputs(esquema.cabecalho, saida.arq) == EOF || fputs(saida.eol, saida.arq) == EOF)
                 saida.erro = true;
-            if (!saida.erro) colPercorrer(resultado, visita_saida, &saida);
+            if (!saida.erro) colPercorrerEixo(resultado, args.axis, visita_saida, &saida);
             if (fclose(saida.arq) != 0) saida.erro = true;
         }
         write_ms = agora_ms() - t0;

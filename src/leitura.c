@@ -17,6 +17,7 @@ static const PERFIL PERFIS[] = {
 };
 #define N_PERFIS (sizeof PERFIS / sizeof PERFIS[0])
 
+// Procura o perfil de leitura pelo nome e retorna NULL quando ele nao existe.
 static const PERFIL *buscar_perfil(const char *nome) {
     if (nome == NULL) return NULL;
     for (size_t i = 0; i < N_PERFIS; i++) {
@@ -25,9 +26,13 @@ static const PERFIL *buscar_perfil(const char *nome) {
     return NULL;
 }
 
+// Informa se o nome corresponde a um perfil suportado.
 bool leitor_valido(const char *nome) { return buscar_perfil(nome) != NULL; }
+
+// Retorna a lista textual dos nomes de leitores disponiveis.
 const char *leitor_listar(void) { return "nasa, lattes, generico"; }
 
+// Compara duas strings sem diferenciar letras maiusculas de minusculas.
 bool texto_igual_ci(const char *a, const char *b) {
     while (*a && *b) {
         if (tolower((unsigned char)*a) != tolower((unsigned char)*b)) return false;
@@ -36,6 +41,7 @@ bool texto_igual_ci(const char *a, const char *b) {
     return *a == *b;
 }
 
+// Aloca e retorna uma copia independente da string recebida.
 static char *copiar(const char *s) {
     size_t n = strlen(s) + 1;
     char *p = malloc(n);
@@ -43,6 +49,7 @@ static char *copiar(const char *s) {
     return p;
 }
 
+// Remove espacos das extremidades modificando a propria string.
 static char *aparar(char *s) {
     while (isspace((unsigned char)*s)) s++;
     size_t n = strlen(s);
@@ -50,12 +57,14 @@ static char *aparar(char *s) {
     return s;
 }
 
+// Classifica um campo como ausente, numero ou texto e grava o numero quando aplicavel.
 TIPO classificar_valor(const char *txt, bool virgula_decimal, double *num) {
     while (isspace((unsigned char)*txt)) txt++;
     size_t len = strlen(txt);
     while (len > 0 && isspace((unsigned char)txt[len - 1])) len--;
     if (len == 0) return AUSENTE;
 
+    // Normaliza marcadores comuns de ausencia e valores booleanos antes da conversao numerica.
     if (len < 8) {
         char w[8];
         memcpy(w, txt, len);
@@ -87,6 +96,7 @@ TIPO classificar_valor(const char *txt, bool virgula_decimal, double *num) {
     return NUMERO;
 }
 
+// Le uma linha completa, aumentando o buffer quando a linha nao cabe no espaco atual.
 static long ler_linha(FILE *f, char **buf, size_t *cap) {
     if (*buf == NULL) {
         *cap = 1024;
@@ -99,6 +109,7 @@ static long ler_linha(FILE *f, char **buf, size_t *cap) {
         len += strlen(*buf + len);
         if (len > 0 && (*buf)[len - 1] == '\n') break;
         if (len + 1 >= *cap) {
+            // A linha pode ultrapassar o tamanho inicial; expande o buffer sem descartar dados.
             char *nb = realloc(*buf, *cap * 2);
             if (nb == NULL) return -1;
             *buf = nb;
@@ -108,12 +119,14 @@ static long ler_linha(FILE *f, char **buf, size_t *cap) {
     return len > 0 ? (long)len : -1;
 }
 
+// Separa os campos no lugar, preservando delimitadores e aspas que pertencem a valores citados.
 static int dividir(char *s, char delim, char **campos, int max) {
     int n = 0;
     char *p = s;
     while (1) {
         char *ini = p;
         if (*p == '"') {
+            // Aspas duplas protegem delimitadores; duas aspas seguidas representam uma aspa literal.
             char *w = p, *r = p + 1;
             while (1) {
                 if (*r == '"') {
@@ -160,10 +173,12 @@ static int dividir(char *s, char delim, char **campos, int max) {
     return n;
 }
 
+// Escolhe o delimitador mais frequente no cabecalho, ignorando caracteres entre aspas.
 static char detectar_delim(const char *cab) {
     const char cand[] = { ';', ',', '\t', '|' };
     int cont[4] = { 0, 0, 0, 0 };
     bool aspas = false;
+    // Ignora delimitadores que aparecem dentro de valores entre aspas no cabecalho.
     for (const char *c = cab; *c; c++) {
         if (*c == '"') 
             aspas = !aspas;
@@ -182,6 +197,7 @@ static char detectar_delim(const char *cab) {
     return cand[melhor];
 }
 
+// Libera os nomes das colunas e o cabecalho armazenados no esquema.
 void esquema_liberar(ESQUEMA *e) {
     if (e == NULL) 
         return;
@@ -192,6 +208,7 @@ void esquema_liberar(ESQUEMA *e) {
     memset(e, 0, sizeof *e);
 }
 
+// Abre o arquivo e inicializa os metadados do cabecalho e das colunas.
 bool esquema_abrir(ESQUEMA *e, const char *reader, const char *pathArquivo) {
     memset(e, 0, sizeof *e);
     const PERFIL *perfil = buscar_perfil(reader);
@@ -215,6 +232,7 @@ bool esquema_abrir(ESQUEMA *e, const char *reader, const char *pathArquivo) {
     linha[strcspn(linha, "\r\n")] = '\0';
     e->cabecalho = copiar(linha);
 
+    // Mantem o BOM no cabecalho bruto, mas remove-o da primeira coluna usada internamente.
     const char *conteudo = linha;
     if ((unsigned char)linha[0] == 0xEF && (unsigned char)linha[1] == 0xBB &&
         (unsigned char)linha[2] == 0xBF)
@@ -251,6 +269,7 @@ bool esquema_abrir(ESQUEMA *e, const char *reader, const char *pathArquivo) {
     return ok;
 }
 
+// Localiza uma coluna por nome, tentando primeiro correspondencia exata e depois sem diferenciar maiuscula e minuscula.
 int esquema_indice(const ESQUEMA *e, const char *nome) {
     for (int i = 0; i < e->nCampos; i++) {
         if (strcmp(e->nomes[i], nome) == 0) 
@@ -263,6 +282,7 @@ int esquema_indice(const ESQUEMA *e, const char *nome) {
     return -1;
 }
 
+// Le os registros do arquivo, converte seus campos e os insere na colecao escolhida.
 COLECAO *carregar_dataset(const char *pathArquivo, const char *tipo_base,
                           const CONFIG *config, const ESQUEMA *e,
                           int limite, int *lidos) {
@@ -281,6 +301,8 @@ COLECAO *carregar_dataset(const char *pathArquivo, const char *tipo_base,
     }
 
     int n = e->nCampos;
+    // trab é uma copia mutavel: dividir() substitui delimitadores por NUL, enquanto linha
+    // permanece intacta para que o ITEM preserve o registro original para exportacao.
     char  *linha = NULL, *trab = NULL;
     size_t cap = 0, cap_trab = 0;
     TIPO *tipos   = malloc((size_t)n * sizeof *tipos);
@@ -315,6 +337,7 @@ COLECAO *carregar_dataset(const char *pathArquivo, const char *tipo_base,
             if (i >= achados)  
                 continue;
             char *campo = aparar(campos[i]);
+            // Em arquivos com delimitador diferente de virgula, virgula pode ser decimal.
             tipos[i] = classificar_valor(campo, e->delimitador != ',', &numeros[i]);
 
             if (tipos[i] == TEXTO) 

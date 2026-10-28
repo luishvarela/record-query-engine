@@ -4,6 +4,7 @@
 #include <math.h>
 #include "busca.h"
 
+// Aplica filtros e similaridades e informa se o item atende ao plano da consulta.
 bool avaliar_item(ITEM *item, const CONSULTA *consulta) {
     if (item == NULL || consulta == NULL) return false;
     if (consulta->n_filtros < 0 || consulta->n_sims < 0) return false;
@@ -15,7 +16,18 @@ bool avaliar_item(ITEM *item, const CONSULTA *consulta) {
         CRITERIO_FILTER f = consulta->filtros[i];
         TIPO tipo_item = iGetTipo(item, f.campo_idx);
 
-        if (tipo_item == AUSENTE || tipo_item != f.tipo_filtro) return false;
+        if (tipo_item == AUSENTE) return false;
+        if (tipo_item == TEXTO && f.tipo_filtro == NUMERO) {
+            // Literais numericos tambem podem identificar codigos guardados como texto.
+            const char *v = iGetTexto(item, f.campo_idx);
+            if (v == NULL || f.valor_texto[0] == '\0') return false;
+            int c = strcmp(v, f.valor_texto);
+            if (f.operador == IGUAL && c != 0) return false;
+            else if (f.operador == DIFERENTE && c == 0) return false;
+            else if (f.operador != IGUAL && f.operador != DIFERENTE) return false;
+            continue;
+        }
+        if (tipo_item != f.tipo_filtro) return false;
 
         if (tipo_item == NUMERO) {
             double val = iGetNumero(item, f.campo_idx);     
@@ -64,6 +76,7 @@ bool avaliar_item(ITEM *item, const CONSULTA *consulta) {
 
         if (!tem_sim_ponderada) return false;
 
+        // iGetSim() combina apenas criterios com peso maior que zero.
         double sim_final = iGetSim(item);
         if (sim_final < consulta->limiar_accept) {
             return false; // rejeitado pelo limiar accept

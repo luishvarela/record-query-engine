@@ -13,10 +13,12 @@ struct StructListaEnc {
     int  Tamanho;
 };
  
+// Cria uma lista encadeada vazia.
 LISTAENC *leCriar(void){
     return (LISTAENC *) calloc(1, sizeof(LISTAENC));
 }
  
+// Libera os nos e, quando solicitado, os itens armazenados.
 void leApagar(LISTAENC **Lista, bool ApagarItens){
     if(Lista == NULL || *Lista == NULL) return;
  
@@ -32,6 +34,7 @@ void leApagar(LISTAENC **Lista, bool ApagarItens){
     *Lista = NULL;
 }
  
+// Acrescenta um item ao fim da lista encadeada.
 bool leInserir(LISTAENC *Lista, ITEM *Item){
     if(Lista == NULL || Item == NULL) return false;
  
@@ -50,6 +53,7 @@ bool leInserir(LISTAENC *Lista, ITEM *Item){
     return true;
 }
  
+// Remove o item pelo endereco e atualiza inicio e fim quando necessario.
 ITEM *leRemover(LISTAENC *Lista, const ITEM *Item){
     if(Lista == NULL || Item == NULL) return NULL;
  
@@ -73,15 +77,18 @@ ITEM *leRemover(LISTAENC *Lista, const ITEM *Item){
     return NULL;
 }
  
+// Retorna a quantidade de itens da lista.
 int leTamanho(const LISTAENC *Lista){
     return (Lista == NULL) ? 0 : Lista->Tamanho;
 }
 
+// Informa se a lista nao contem itens.
 bool leVazia(const LISTAENC *Lista){
     if(leTamanho(Lista) == 0) return true;
     else                      return false;
 }
 
+// Visita os itens do inicio ao fim
 void lePercorrer(const LISTAENC *Lista, VISITA Visitar, void *Contexto){
     if(Lista == NULL || Visitar == NULL) return;
     for(NO *Atual = Lista->Inicio; Atual != NULL; Atual = Atual->Proximo)

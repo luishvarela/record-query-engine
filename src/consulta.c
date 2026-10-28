@@ -7,6 +7,7 @@
 
 #define MAX_PARTES 32
 
+// Remove espacos das extremidades sem mover o conteudo da string.
 static char *aparar(char *s) {
     while (isspace((unsigned char)*s)) 
         s++;
@@ -16,6 +17,7 @@ static char *aparar(char *s) {
     return s;
 }
 
+// Separa uma linha de consulta nos campos delimitados por pipe.
 static int dividir_pipe(char *linha, char **partes) {
     int n = 0;
     char *p = linha;
@@ -29,10 +31,12 @@ static int dividir_pipe(char *linha, char **partes) {
     return n;
 }
 
+// Converte o texto somente se ele representar um numero valido.
 static bool numero_estrito(const char *s, double *v) {
     return classificar_valor(s, false, v) == NUMERO;
 }
 
+// Traduz o simbolo do FILTER para o operador interno correspondente.
 static bool parse_operador(const char *s, OPERADOR *op) {
     if      (strcmp(s, "==") == 0) *op = IGUAL;
     else if (strcmp(s, "!=") == 0) *op = DIFERENTE;
@@ -44,6 +48,7 @@ static bool parse_operador(const char *s, OPERADOR *op) {
     return true;
 }
 
+// Cresce vetores de criterios sob demanda, mantendo a capacidade em blocos dobrados.
 static bool garantir(void **v, int n, int *cap, size_t tam) {
     if (n < *cap) return true;
     int nova = *cap ? *cap * 2 : 4;
@@ -54,6 +59,7 @@ static bool garantir(void **v, int n, int *cap, size_t tam) {
     return true;
 }
 
+// Libera os vetores dinamicos do plano e reinicializa sua estrutura.
 void consulta_liberar(PLANO_CONSULTA *p) {
     if (p == NULL) return;
     free(p->consulta.filtros);
@@ -62,6 +68,7 @@ void consulta_liberar(PLANO_CONSULTA *p) {
     memset(p, 0, sizeof *p);
 }
 
+// Le e valida os comandos da consulta, preenchendo o plano ou a mensagem de erro.
 bool consulta_carregar(const char *path, const ESQUEMA *esquema,
                        PLANO_CONSULTA *plano, char *erro, size_t tam_erro) {
     memset(plano, 0, sizeof *plano);
@@ -87,6 +94,7 @@ bool consulta_carregar(const char *path, const ESQUEMA *esquema,
         if (num_linha == 1 && (unsigned char)linha[0] == 0xEF &&
             (unsigned char)linha[1] == 0xBB && (unsigned char)linha[2] == 0xBF)
             linha += 3;
+        // Linhas vazias e comentarios nao fazem parte do plano de consulta.
         linha = aparar(linha);
         if (*linha == '\0' || *linha == '#') continue;
 
@@ -123,6 +131,9 @@ bool consulta_carregar(const char *path, const ESQUEMA *esquema,
                 sucesso = false; break;
             }
             f.tipo_filtro = t;
+            // Guarda tambem o literal numerico para comparar codigos de texto como "10".
+            if (t == NUMERO && strlen(p[3]) < sizeof f.valor_texto)
+                strcpy(f.valor_texto, p[3]);
             if (t == TEXTO) {
                 char *v = p[3];
                 size_t len = strlen(v);

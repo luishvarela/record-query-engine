@@ -20,10 +20,13 @@ static const char *const Nomes[] = {
 };
 
 struct StructColecao {
+    // A fachada guarda o tipo concreto e encaminha as operacoes para a TAD correspondente.
     ESTRUTURA Estrutura;
     void     *Dados;
 };
 
+// A posicao de cada nome em Nomes corresponde ao valor da estrutura no enum acima.
+// Converte o nome recebido na CLI para o tipo interno usado nos despachos abaixo.
 static ESTRUTURA colIdentificar(const char *Nome){
     if(Nome == NULL) return E_INVALIDA;
 
@@ -32,6 +35,7 @@ static ESTRUTURA colIdentificar(const char *Nome){
     return E_INVALIDA;
 }
 
+// Libera a estrutura concreta; ApagarItens controla se tambem libera os ITEM armazenados.
 static void colApagarDados(ESTRUTURA Estrutura, void *Dados, bool ApagarItens){
     switch(Estrutura){
         case E_PILHA:  pApagar((PILHA **) &Dados, ApagarItens); break;
@@ -46,17 +50,21 @@ static void colApagarDados(ESTRUTURA Estrutura, void *Dados, bool ApagarItens){
     }
 }
 
+// Informa se o nome pode ser usado para selecionar uma das TADs suportadas.
 bool colNomeValido(const char *Nome){
     return colIdentificar(Nome) != E_INVALIDA;
 }
 
+// Cria a fachada e a TAD concreta correspondente ao nome e configuracao.
 COLECAO *colCriar(const char *Nome, const CONFIG *Config){
     ESTRUTURA Estrutura = colIdentificar(Nome);
     if(Estrutura == E_INVALIDA) return NULL;
 
+    // Campos negativos fazem a lista cruzada reunir os itens em um unico grupo por eixo.
     CONFIG Padrao = {NULL, 0, NULL, 0, -1, -1};
     if(Config == NULL) Config = &Padrao;
 
+    // Cria a implementacao adequada e passa apenas a configuracao que ela utiliza.
     void *Dados = NULL;
     switch(Estrutura){
         case E_PILHA:  Dados = pCriar(); break;
@@ -74,6 +82,7 @@ COLECAO *colCriar(const char *Nome, const CONFIG *Config){
 
     COLECAO *Colecao = (COLECAO *) malloc(sizeof(COLECAO));
     if(Colecao == NULL){
+        // A TAD ja foi criada, portanto libera seus nos antes de retornar erro.
         colApagarDados(Estrutura, Dados, false);
         return NULL;
     }
@@ -83,6 +92,7 @@ COLECAO *colCriar(const char *Nome, const CONFIG *Config){
     return Colecao;
 }
 
+// Libera a TAD e a fachada, podendo tambem liberar os itens armazenados.
 void colApagar(COLECAO **Colecao, bool ApagarItens){
     if(Colecao == NULL || *Colecao == NULL) return;
 
@@ -91,6 +101,7 @@ void colApagar(COLECAO **Colecao, bool ApagarItens){
     *Colecao = NULL;
 }
 
+// Insere o item na TAD concreta sem expor sua implementacao ao chamador.
 bool colInserir(COLECAO *Colecao, ITEM *Item){
     if(Colecao == NULL) return false;
     switch(Colecao->Estrutura){
@@ -106,6 +117,7 @@ bool colInserir(COLECAO *Colecao, ITEM *Item){
     }
 }
 
+// Retorna o numero de itens da TAD concreta.
 int colTamanho(const COLECAO *Colecao){
     if(Colecao == NULL) return 0;
     switch(Colecao->Estrutura){
@@ -121,6 +133,7 @@ int colTamanho(const COLECAO *Colecao){
     }
 }
 
+// Percorre a TAD e encaminha cada item ao callback sem expor sua representacao.
 void colPercorrer(const COLECAO *Colecao, VISITA Visitar, void *Contexto){
     if(Colecao == NULL) return;
     switch(Colecao->Estrutura){
@@ -134,4 +147,13 @@ void colPercorrer(const COLECAO *Colecao, VISITA Visitar, void *Contexto){
         case E_CRUZ:   lxPercorrer((const LISTACRUZ *) Colecao->Dados, Visitar, Contexto); break;
         default: break;
     }
+}
+
+// Usa o eixo solicitado na lista cruzada ou o percurso normal para as demais TADs.
+void colPercorrerEixo(const COLECAO *Colecao, int Eixo, VISITA Visitar, void *Contexto){
+    // O eixo so se aplica a lista cruzada; as outras TADs mantem seu percurso natural.
+    if(Colecao != NULL && Colecao->Estrutura == E_CRUZ)
+        lxPercorrerEixo((const LISTACRUZ *) Colecao->Dados, Eixo, Visitar, Contexto);
+    else
+        colPercorrer(Colecao, Visitar, Contexto);
 }

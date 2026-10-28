@@ -10,6 +10,7 @@ struct StructListaSeq {
     int    Capacidade;
 };
  
+// Cria uma lista sequencial com sua capacidade inicial.
 LISTASEQ *lsCriar(void){
     LISTASEQ *Lista = (LISTASEQ *) calloc(1, sizeof(LISTASEQ));
     if(Lista == NULL) return NULL;
@@ -24,6 +25,7 @@ LISTASEQ *lsCriar(void){
     return Lista;
 }
  
+// Libera o vetor e, quando solicitado, os itens que ele referencia.
 void lsApagar(LISTASEQ **Lista, bool ApagarItens){
     if(Lista == NULL || *Lista == NULL) return;
  
@@ -35,6 +37,7 @@ void lsApagar(LISTASEQ **Lista, bool ApagarItens){
     *Lista = NULL;
 }
  
+// Acrescenta um item ao fim, dobrando a capacidade se necessario.
 bool lsInserir(LISTASEQ *Lista, ITEM *Item){
     if(Lista == NULL || Item == NULL) return false;
  
@@ -54,6 +57,7 @@ bool lsInserir(LISTASEQ *Lista, ITEM *Item){
     return true;
 }
  
+// Remove pelo endereco do item e desloca os elementos seguintes para fechar o espaco.
 ITEM *lsRemover(LISTASEQ *Lista, const ITEM *Item){
     if(Lista == NULL || Item == NULL) return NULL;
  
@@ -71,20 +75,24 @@ ITEM *lsRemover(LISTASEQ *Lista, const ITEM *Item){
     return NULL;
 }
  
+// Retorna o item na posicao indicada ou NULL se ela estiver fora da lista.
 ITEM *lsGet(const LISTASEQ *Lista, int Posicao){
     if(Lista == NULL || Posicao < 0 || Posicao >= Lista->Tamanho) return NULL;
     return Lista->Itens[Posicao];
 }
  
+// Retorna a quantidade de itens da lista.
 int lsTamanho(const LISTASEQ *Lista){
     return (Lista == NULL) ? 0 : Lista->Tamanho;
 }
 
+// Informa se a lista nao contem itens.
 bool lsVazia(const LISTASEQ *Lista){
     if(lsTamanho(Lista) == 0) return true;
     else                      return false;
 }
 
+// Visita os itens na ordem dos indices
 void lsPercorrer(const LISTASEQ *Lista, VISITA Visitar, void *Contexto){
     if(Lista == NULL || Visitar == NULL) return;
     for(int i = 0; i < Lista->Tamanho; i++)

@@ -13,10 +13,12 @@ struct StructFila {
     int  Tamanho;
 };
  
+// Cria uma fila vazia.
 FILA *fCriar(void){
     return (FILA *) calloc(1, sizeof(FILA));
 }
  
+// Libera todos os nos e, opcionalmente, os itens armazenados.
 void fApagar(FILA **Fila, bool ApagarItens){
     if(Fila == NULL || *Fila == NULL) return;
  
@@ -31,6 +33,7 @@ void fApagar(FILA **Fila, bool ApagarItens){
     *Fila = NULL;
 }
  
+// Adiciona um item ao fim da fila.
 bool fEnfileirar(FILA *Fila, ITEM *Item){
     if(Fila == NULL || Item == NULL) return false;
  
@@ -48,6 +51,7 @@ bool fEnfileirar(FILA *Fila, ITEM *Item){
     return true;
 }
  
+// Remove e retorna o item do inicio da fila.
 ITEM *fDesenfileirar(FILA *Fila){
     if(Fila == NULL || Fila->Inicio == NULL) return NULL;
  
@@ -61,19 +65,23 @@ ITEM *fDesenfileirar(FILA *Fila){
     return Item;
 }
  
+// Consulta o primeiro item sem remove-lo.
 ITEM *fInicio(const FILA *Fila){
     return (Fila == NULL || Fila->Inicio == NULL) ? NULL : Fila->Inicio->Item;
 }
  
+// Retorna a quantidade de itens da fila.
 int fTamanho(const FILA *Fila){
     return (Fila == NULL) ? 0 : Fila->Tamanho;
 }
  
+// Informa se a fila nao contem itens.
 bool fVazia(const FILA *Fila){
     if(fTamanho(Fila) == 0) return true;
     else                    return false;
 }
  
+// Visita os itens do inicio ao fim
 void fPercorrer(const FILA *Fila, VISITA Visitar, void *Contexto){
     if(Fila == NULL || Visitar == NULL) return;
     for(NO *Atual = Fila->Inicio; Atual != NULL; Atual = Atual->Proximo)

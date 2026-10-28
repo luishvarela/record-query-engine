@@ -2,7 +2,7 @@
 #define BUSCA_H
 
 #include <stdbool.h>
-#include "TADS/Item.h"
+#include "Item.h"
 
 // operadores do comando FILTER
 typedef enum { 

@@ -12,7 +12,7 @@ OBJ_DIR = obj
 
 # Localiza todos os arquivos .c dentro de src/ e a main.c
 SRCS = $(wildcard $(SRC_DIR)/*.c) main.c
-OBJS = $(patsqatsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
+OBJS = $(patsubst %.c, $(OBJ_DIR)/%.o, $(notdir $(SRCS)))
 
 # Regra principal
 all: $(OBJ_DIR) $(TARGET)

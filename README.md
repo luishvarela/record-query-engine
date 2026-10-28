@@ -104,7 +104,8 @@ O executável gerado se chama `trabalho` e aceita os seguintes argumentos formai
   --query consultas/q1.txt \
   --output resultado.csv \
   --top-k 100 \
-  --limit 10000
+  --limit 10000 \
+  --axis 0
 ```
 
 ### **Descrição dos Argumentos**
@@ -116,6 +117,7 @@ O executável gerado se chama `trabalho` e aceita os seguintes argumentos formai
 - `--output`: Caminho para salvar os primeiros `--top-k` resultados em CSV.
 - `--top-k`: Quantidade máxima de registros a exportar (`0` para todos).
 - `--limit`: Limite de registros a carregar da base (`0` para a base inteira).
+- `--axis`: Eixo de percurso da saída quando `--result lista_cruz` (`0` ou `1`; padrão `0`). Ignorado nas demais estruturas.
 
 ---
 
@@ -124,14 +126,14 @@ O executável gerado se chama `trabalho` e aceita os seguintes argumentos formai
 O arquivo de consulta texto suporta os seguintes comandos por linha:
 
 ```text
-FILTER is_future_event|==|true
-FILTER distance_au|<=|10.08
-SIM velocity_km_s|15.0|10.0|1.0
-SIM risk_score|0.70|0.30|2.0
-ACCEPT 0.60
-ORDER similarity|DESC
-GROUP threat_category|year
-CROSS threat_category|year
+FILTER|is_future_event|==|true
+FILTER|distance_au|<=|10.08
+SIM|velocity_km_s|15.0|10.0|1.0
+SIM|risk_score|0.70|0.30|2.0
+ACCEPT|0.60
+ORDER|similarity|DESC
+GROUP|threat_category|year
+CROSS|threat_category|year
 ```
 
 ---

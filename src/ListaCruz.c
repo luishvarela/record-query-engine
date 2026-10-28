@@ -40,6 +40,7 @@ static GRUPO *lxLocalizarGrupo(const LISTACRUZ *Lista, int Eixo, const CHAVE *Ch
 }
 
 // Liga a celula ao fim do grupo do eixo (cria o grupo se for preciso).
+// Insere a celula no grupo da chave do eixo, criando o grupo quando necessario.
 static bool lxAnexar(LISTACRUZ *Lista, int Eixo, CELULA *Celula){
     CHAVE Chave;
     if(!cCriar(Celula->Item, Lista->Campos[Eixo], &Chave)) return false;
@@ -101,6 +102,7 @@ static bool lxDesligar(LISTACRUZ *Lista, int Eixo, CELULA *Celula){
     return false;
 }
 
+// Procura uma celula pelo endereco do item usando o eixo principal.
 static CELULA *lxEncontrar(const LISTACRUZ *Lista, const ITEM *Item){
     for(GRUPO *Grupo = Lista->Grupos[0]; Grupo != NULL; Grupo = Grupo->Proximo)
         for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[0])
@@ -109,6 +111,7 @@ static CELULA *lxEncontrar(const LISTACRUZ *Lista, const ITEM *Item){
     return NULL;
 }
 
+// Confirma que a mesma celula tambem esta conectada ao eixo indicado.
 static bool lxContemCelula(const LISTACRUZ *Lista, int Eixo, const CELULA *Celula){
     for(GRUPO *Grupo = Lista->Grupos[Eixo]; Grupo != NULL; Grupo = Grupo->Proximo)
         for(CELULA *Atual = Grupo->Inicio; Atual != NULL; Atual = Atual->Proximo[Eixo])
@@ -117,6 +120,7 @@ static bool lxContemCelula(const LISTACRUZ *Lista, int Eixo, const CELULA *Celul
     return false;
 }
 
+// Cria uma lista cruzada configurada com um campo de agrupamento por eixo.
 LISTACRUZ *lxCriar(int CampoA, int CampoB){
     LISTACRUZ *Lista = (LISTACRUZ *) calloc(1, sizeof(LISTACRUZ));
     if(Lista == NULL) return NULL;
@@ -127,10 +131,11 @@ LISTACRUZ *lxCriar(int CampoA, int CampoB){
     return Lista;
 }
 
+// Libera as celulas uma vez pelo eixo 0 e depois os grupos do eixo 1.
 void lxApagar(LISTACRUZ **Lista, bool ApagarItens){
     if(Lista == NULL || *Lista == NULL) return;
 
-    //Toda celula em um grupo do eixo 0, por onde sao liberadas
+    // Cada celula pertence aos dois eixos, mas so deve ser liberada uma vez pelo eixo 0.
     GRUPO *Grupo = (*Lista)->Grupos[0];
     while(Grupo != NULL){
         GRUPO *ProximoGrupo = Grupo->Proximo;
@@ -148,7 +153,7 @@ void lxApagar(LISTACRUZ **Lista, bool ApagarItens){
         Grupo = ProximoGrupo;
     }
 
-    // Celulas liberadas -> Libera os grupos
+    // As celulas ja foram liberadas; no eixo 1 resta liberar somente os grupos e suas chaves.
     Grupo = (*Lista)->Grupos[1];
     while(Grupo != NULL){
         GRUPO *ProximoGrupo = Grupo->Proximo;
@@ -161,6 +166,7 @@ void lxApagar(LISTACRUZ **Lista, bool ApagarItens){
     *Lista = NULL;
 }
 
+// Cria uma celula compartilhada e conecta-a aos dois eixos atomicamente.
 bool lxInserir(LISTACRUZ *Lista, ITEM *Item){
     if(Lista == NULL || Item == NULL) return false;
 
@@ -174,6 +180,7 @@ bool lxInserir(LISTACRUZ *Lista, ITEM *Item){
     }
 
     if(!lxAnexar(Lista, 1, Nova)){
+        // A insercao so e valida nos dois eixos; desfaz o primeiro anexo se o segundo falhar.
         lxDesligar(Lista, 0, Nova);
         free(Nova);
         return false;
@@ -183,6 +190,7 @@ bool lxInserir(LISTACRUZ *Lista, ITEM *Item){
     return true;
 }
 
+// Desconecta dos dois eixos e devolve o item sem libera-lo.
 ITEM *lxRemover(LISTACRUZ *Lista, const ITEM *Item){
     if(Lista == NULL || Item == NULL) return NULL;
 
@@ -199,15 +207,18 @@ ITEM *lxRemover(LISTACRUZ *Lista, const ITEM *Item){
     return Removido;
 }
 
+// Retorna o total de itens unicos da lista cruzada.
 int lxTamanho(const LISTACRUZ *Lista){
     return (Lista == NULL) ? 0 : Lista->Tamanho;
 }
 
+// Informa se a lista cruzada nao contem itens.
 bool lxVazia(const LISTACRUZ *Lista){
     if(lxTamanho(Lista) == 0) return true;
     else                      return false;
 }
 
+// Percorre os grupos do eixo escolhido e para se o callback solicitar.
 void lxPercorrerEixo(const LISTACRUZ *Lista, int Eixo, VISITA Visitar, void *Contexto){
     if(Lista == NULL || Visitar == NULL || Eixo < 0 || Eixo >= N_EIXOS) return;
 
@@ -216,6 +227,7 @@ void lxPercorrerEixo(const LISTACRUZ *Lista, int Eixo, VISITA Visitar, void *Con
             if(Visitar(Atual->Item, Contexto)) return;
 }
 
+// Percorre pelo eixo 0, que e a ordem padrao da lista cruzada.
 void lxPercorrer(const LISTACRUZ *Lista, VISITA Visitar, void *Contexto){
     lxPercorrerEixo(Lista, 0, Visitar, Contexto);
 }
