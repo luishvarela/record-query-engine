@@ -1,0 +1,5 @@
+FILTER|on_sentry_list|==|true
+FILTER|sentry_diameter_km|>=|0.1
+ORDER|sentry_diameter_km|DESC
+GROUP|year|month
+CROSS|year|threat_category

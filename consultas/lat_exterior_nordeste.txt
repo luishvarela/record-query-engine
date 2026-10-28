@@ -1,0 +1,7 @@
+FILTER|Região (Atuação)|==|Nordeste
+FILTER|País (Formação)|!=|Brasil
+FILTER|Setor de Atividade (Atuação)|==|Ensino Superior
+FILTER|Ano|>=|2020
+ORDER|Ano|DESC
+GROUP|UF (Atuação)|Grande Área (Atuação)
+CROSS|UF (Atuação)|Ano

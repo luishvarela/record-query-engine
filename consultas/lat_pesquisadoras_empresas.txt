@@ -1,0 +1,6 @@
+FILTER|Sexo|==|Feminino
+FILTER|Setor de Atividade (Atuação)|==|Setor Empresarial
+FILTER|Enquadramento (Atuação)|==|Pesquisador
+ORDER|Instituição (Atuação)|ASC
+GROUP|Grande Área (Atuação)|Ano
+CROSS|Grande Área (Atuação)|UF (Atuação)

@@ -1,0 +1,10 @@
+FILTER|is_past_event|==|true
+FILTER|year|>=|2019
+FILTER|year|<=|2024
+FILTER|threat_category|!=|SAFE
+SIM|risk_score|0.60|0.30|3.0
+SIM|absolute_magnitude|20.0|5.0|1.0
+ACCEPT|0.40
+ORDER|risk_score|DESC
+GROUP|month|threat_category
+CROSS|month|year

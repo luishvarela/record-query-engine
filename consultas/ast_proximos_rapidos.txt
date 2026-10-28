@@ -1,0 +1,8 @@
+FILTER|is_future_event|==|true
+FILTER|distance_au|<=|0.05
+SIM|distance_au|0.01|0.04|2.0
+SIM|velocity_km_s|30.0|20.0|1.0
+ACCEPT|0.50
+ORDER|similarity|DESC
+GROUP|threat_category|year
+CROSS|threat_category|year

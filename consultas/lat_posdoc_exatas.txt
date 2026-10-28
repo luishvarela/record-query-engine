@@ -1,0 +1,7 @@
+FILTER|Bolsista - Pós-doutorado|==|Sim
+FILTER|Grande Área (Atuação)|==|Ciências Exatas e da Terra
+SIM|Ano|2025|3|1.0
+ACCEPT|0.30
+ORDER|similarity|DESC
+GROUP|Região (Atuação)|Ano
+CROSS|Região (Atuação)|Ano
